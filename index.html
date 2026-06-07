@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bank Super App Architecture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; background: #ffffff; }
+    #root { min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    * { box-sizing: border-box; }
+    .animate-in { animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    #loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; color: #64748b; flex-direction: column; gap: 12px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div id="loading">
+      <div class="spinner"></div>
+      <span>Loading Bank Super App Architecture...</span>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    /* ── Inline SVG Icon Components ── */
+    const SvgIcon = ({ className='', size=24, strokeWidth=2, children }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+           strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+
+
+    const Shield = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></SvgIcon>;
+    const Smartphone = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="17" y2="17"/></SvgIcon>;
+    const Globe = ({className='',size=24}) => <SvgIcon className={className} size={size}><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></SvgIcon>;
+    const Layers = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></SvgIcon>;
+    const Lock = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></SvgIcon>;
+    const Server = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></SvgIcon>;
+    const ArrowRight = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></SvgIcon>;
+    const ArrowDown = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></SvgIcon>;
+    const Box = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></SvgIcon>;
+    const Key = ({className='',size=24}) => <SvgIcon className={className} size={size}><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></SvgIcon>;
+    const Activity = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></SvgIcon>;
+    const AlertCircle = ({className='',size=24}) => <SvgIcon className={className} size={size}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></SvgIcon>;
+    const FileText = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></SvgIcon>;
+    const CheckCircle = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></SvgIcon>;
+    const Wifi = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></SvgIcon>;
+    const Briefcase = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></SvgIcon>;
+    const Scale = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21H17"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></SvgIcon>;
+    const Handshake = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></SvgIcon>;
+    const Users = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></SvgIcon>;
+    const Zap = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></SvgIcon>;
+    const Layout = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></SvgIcon>;
+    const Cloud = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></SvgIcon>;
+    const Cpu = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></SvgIcon>;
+    const Share2 = ({className='',size=24}) => <SvgIcon className={className} size={size}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></SvgIcon>;
+    const Rocket = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></SvgIcon>;
+    const Network = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M12 3v6"/><path d="M3 12h6"/><path d="M21 12h-6"/><path d="M12 21v-6"/><circle cx="12" cy="3" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="21" cy="12" r="1"/><circle cx="12" cy="21" r="1"/></SvgIcon>;
+    const ChevronLeft = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m15 18-6-6 6-6"/></SvgIcon>;
+    const ChevronRight = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m9 18 6-6-6-6"/></SvgIcon>;
+    const ChevronUp = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m18 15-6-6-6 6"/></SvgIcon>;
+    const ChevronDown = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m6 9 6 6 6-6"/></SvgIcon>;
+    const PanelRightClose = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="15" x2="15" y1="3" y2="21"/><path d="m8 9 3 3-3 3"/></SvgIcon>;
+    const PanelRightOpen = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="15" x2="15" y1="3" y2="21"/><path d="m18 9-3 3 3 3"/></SvgIcon>;
+    const GitCompare = ({className='',size=24}) => <SvgIcon className={className} size={size}><circle cx="6" cy="6" r="3"/><path d="M6 9v14"/><path d="M21 15a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M18 6V3"/><path d="m18 6-3 3 3 3"/><path d="m6 15-3 3 3 3"/></SvgIcon>;
+    const Fingerprint = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 17.5c2.5-1.5 4.5-3 6.5-7.5"/><path d="M20 10c.6.99.9 2.01.9 3.02 0 .66-.07 1.3-.19 1.92"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/></SvgIcon>;
+    const Database = ({className='',size=24}) => <SvgIcon className={className} size={size}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></SvgIcon>;
+    const PieChart = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></SvgIcon>;
+    const MousePointer = ({className='',size=24}) => <SvgIcon className={className} size={size}><path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/></SvgIcon>;
+    const CreditCard = ({className='',size=24}) => <SvgIcon className={className} size={size}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></SvgIcon>;
+
+
+    /* ── Main Component (from source file, imports stripped) ── */
+    const BankSuperAppArchitecture = () => {
+      const [selectedNode, setSelectedNode] = useState('host');
+        const [activeSection, setActiveSection] = useState('arch');
+        const [isNavExpanded, setIsNavExpanded] = useState(true);
+        const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+  
+        // State for collapsible sidebar sections
+        const [expandedSections, setExpandedSections] = useState({
+          tech: true,
+          tradeoff: true,
+          arch: true,
+          details: true,
+          note: true,
+          mapping: true
+        });
+
+        const toggleSection = (section) => {
+          setExpandedSections(prev => ({
+            ...prev,
+            [section]: !prev[section]
+          }));
+        };
+
+        // Refs for scrolling
+        const archRef = useRef(null);
+        const flowRef = useRef(null);
+        const partnerRef = useRef(null);
+
+        const scrollToSection = (ref, sectionKey) => {
+          ref.current?.scrollIntoView({ behavior: 'smooth' });
+          setActiveSection(sectionKey);
+        };
+
+        const architectureData = {
+          host: {
+            title: "Host App: Native Core",
+            backbaseMap: "Backbase Mobile SDK (iOS/Android)",
+            icon: <Smartphone className="w-6 h-6 text-blue-600" />,
+            role: "The Super App Shell",
+            tech: "Native (Swift/Kotlin)\n• iOS: Swift (UIKit/SwiftUI) for direct access to Secure Enclave.\n• Android: Kotlin for modern, null-safe development.\n• Rationale: Non-negotiable for 'Trust Anchor' features (Biometrics, Cryptography) requiring raw hardware access.",
+            archModel: "Shell Application Pattern\n• Concept: The host acts as an immutable 'Mother Ship'.\n• Consideration 1: Decoupling. Core security rails (Auth, Nav) are separated from volatile feature logic.\n• Consideration 2: Stability. A crash in a mini-app (WebView) is isolated and does not crash the Host App.",
+            details: [
+              "Responsible for App Lifecycle & Security.",
+              "Manages User Session (OIDC/OAuth2).",
+              "Holds the 'Golden Source' of customer data.",
+              "Implements Biometric Authentication (FaceID/Fingerprint)."
+            ],
+            deployment: "App Store Distribution\n• Hardening: Mandatory DexGuard/iXGuard obfuscation before build.\n• Integrity: RASP (Runtime App Self Protection) injection.\n• Release Strategy: Phased Rollouts (1% → 5% → 100%) via App Store Connect & Play Console to monitor crash loop metrics.",
+            malaysiaContext: "Complies with BNM RMiT 'Mobile Application Security' guidelines. Ensures root detection and jailbreak checks are active before loading any modules."
+          },
+          bridge: {
+            title: "Secure JS Bridge",
+            backbaseMap: "Backbase Native Bridge",
+            icon: <Layers className="w-6 h-6 text-purple-600" />,
+            role: "Communication Channel",
+            tech: "Custom JS Interface / WebViewJavascriptBridge",
+            archModel: "Event Bus / Messenger Pattern\n• Concept: Asynchronous, serializable message passing.\n• Consideration: Strictly decouples the web consumer from the native provider, preventing direct memory access.",
+            details: [
+              "Asynchronous message passing.",
+              "Allow-listing of specific 3rd party domains.",
+              "Translates generic requests (e.g., 'pay_10_myr') into native intent."
+            ],
+            deployment: "Embedded strictly within the Host App binary. Updates are tied to Host App release cycles (typically monthly). Cannot be updated over-the-air (OTA) due to security constraints.",
+            malaysiaContext: "Critical for preventing XSS attacks. We strictly validate the 'origin' of every message. No direct DOM access allowed."
+          },
+          container: {
+            title: "Secure Sandbox Container",
+            backbaseMap: "Mobile SDK Web Container",
+            icon: <Box className="w-6 h-6 text-orange-600" />,
+            role: "Isolation Environment",
+            tech: "Multi-Layered Sandbox Architecture:\n• Security Layer: Enforces CSP, traffic interception, and resource integrity (SRI).\n• Runtime Engine: WebKit/Chromium instance hosting the partner logic.\n• Bridge Layer: Marshals messages between the JS world and Native Host.",
+            optionsComparison: [
+              {
+                option: "Option 1: Hardened WebView",
+                verdict: "Recommended Strategy",
+                pros: "Supports Over-The-Air (OTA) updates, strict memory isolation (process separation), write-once-run-anywhere.",
+                cons: "Slightly higher resource overhead than native views; requires bridge for hardware access."
+              },
+              {
+                option: "Option 2: Native SDK Embedding",
+                verdict: "High Performance / High Risk",
+                pros: "Maximum performance (60fps), seamless UI transitions, full thread access.",
+                cons: "Tightly coupled (SDK crash = App crash), requires App Store release for updates, dependency conflicts (e.g., conflicting Networking libraries)."
+              }
+            ],
+            archModel: "Sandboxed Isolation Layer\n• Concept: Zero-trust runtime environment.\n• Consideration: Guest (MFE) has no direct access to the host's memory, storage, or cookies.",
+            details: [
+              "Enforces Content Security Policy (CSP) to restrict external calls.",
+              "Network traffic interception & allow-listing.",
+              "Storage partitioning (prevents cross-app data leaks)."
+            ],
+            deployment: "Configuration shipped with Host App, but content is fetched dynamically. Requires strict CSP headers and mandatory Subresource Integrity (SRI) checks on all loaded assets.",
+            malaysiaContext: "Ensures 'Data Leakage Prevention'. Deployment requires static assets to be served from CDNs with Malaysia PoPs (e.g., CloudFront KUL edge locations) to ensure low latency and data sovereignty compliance."
+          },
+          mfe: {
+            title: "3rd Party Micro-Frontend",
+            backbaseMap: "Journey / Widget (Angular)",
+            icon: <Globe className="w-6 h-6 text-green-600" />,
+            role: "Mini-App Logic",
+            tech: "React/Vue/Angular Bundle",
+            archModel: "Federated Module / Remote MFE\n• Concept: Business logic is decoupled from the shell.\n• Consideration: Loaded on-demand, allowing for independent release cycles.",
+            details: [
+              "Hosted independently by the partner.",
+              "Lazy loaded via the Secure Container.",
+              "Stateless: Relies on Host for user context."
+            ],
+            deployment: "Deployed independently to Partner's CDN. Supports Over-The-Air (OTA) updates immediately. Must be versioned to match the Bridge API capability.",
+            malaysiaContext: "Allows partners (e.g., Takaful providers) to update features instantly without Bank App Store submission."
+          },
+          gateway: {
+            title: "OIDC-Compliant API Layer",
+            backbaseMap: "Backbase Edge Service",
+            icon: <Shield className="w-6 h-6 text-cyan-600" />,
+            role: "Secure Edge Entry Point",
+            tech: "Kong / AWS API Gateway / Apigee",
+            archModel: "API Gateway Pattern & BF (Backend for Frontend)\n• Concept: Single entry point for all client traffic.\n• Consideration: Offloads SSL termination, Rate Limiting, and JWT Validation from microservices.",
+            details: [
+              "JWT/OIDC Token Validation (Edge Security).",
+              "Rate Limiting & DDoS Protection.",
+              "Request Routing to Microservices.",
+              "Header Sanitization."
+            ],
+            deployment: "Deployed in the DMZ (Demilitarized Zone). Auto-scaling based on traffic throughput.",
+            malaysiaContext: "Must adhere to BNM RMiT 'API Security' standards. All traffic must be TLS 1.2+ encrypted."
+          },
+          idp: {
+              title: "Identity Provider (IdP)",
+              backbaseMap: "Backbase Identity (Keycloak)",
+              icon: <Fingerprint className="w-6 h-6 text-yellow-600" />,
+              role: "Authentication Authority",
+              tech: "OIDC / OAuth2 Server (e.g., Keycloak, ForgeRock)",
+              archModel: "Centralized Identity Management\n• Concept: Single Source of Truth for user identity.\n• Consideration: Handles MFA, Biometric Key validation, and session management.",
+              details: [
+                  "Validates User Credentials & Biometrics.",
+                  "Issues Primary Bank Sessions (Refresh/Access Tokens).",
+                  "Manages Consent Grants for 3rd parties."
+              ],
+              deployment: "Clustered deployment in High Security Zone. Hardware Security Module (HSM) integration for signing keys.",
+              malaysiaContext: "Must implement 'Step-up Authentication' for high-value transactions as per BNM guidelines."
+          },
+          token: {
+            title: "Token Exchange Service",
+            backbaseMap: "Identity Token Converter",
+            icon: <Key className="w-6 h-6 text-yellow-500" />,
+            role: "Auth Scope Manager",
+            tech: "OAuth2 Token Exchange (RFC 8693)",
+            archModel: "Token Mediation Pattern\n• Concept: Converts a high-privilege session (Bank User) into a low-privilege, scoped access token.",
+            details: [
+              "Swaps Bank Session for scoped Mini-App Token.",
+              "Audience Binding: Token only works for specific Partner APIs.",
+              "Short TTL (Time To Live) for minimized risk."
+            ],
+            deployment: "Deployed alongside IdP. Stateless microservice.",
+            malaysiaContext: "Zero Trust Implementation. Even if the Mini-App is compromised, the token cannot perform core banking functions without step-up auth."
+          },
+          microservices: {
+            title: "Digital Banking Microservices",
+            backbaseMap: "Digital Banking Services (DBS)",
+            icon: <Zap className="w-6 h-6 text-blue-600" />,
+            role: "Core Business Logic",
+            tech: "Java (Spring Boot) / GoLang",
+            archModel: "Domain Driven Design (DDD)\n• Concept: Independent deployable units for specific business capabilities.",
+            details: [
+              "Accounts & Deposits (Integration with CBS).",
+              "Card Management (Integration with CMS).",
+              "Payments (Integration with Switch).",
+              "Loan Origination."
+            ],
+            deployment: "Containerized (K8s) with Service Mesh (Istio) for mTLS.",
+            malaysiaContext: "Business rules engine ensures compliance with BNM Fair Treatment of Financial Consumers (FTFC)."
+          },
+          backend: {
+            title: "Audit & Common Services",
+            backbaseMap: "Audit & Content Services",
+            icon: <Database className="w-6 h-6 text-indigo-600" />,
+            role: "Shared Core Infrastructure",
+            tech: "Microservices (Java/Go/Node.js)",
+            archModel: "Shared Services Pattern\n• Concept: Reusable infrastructure components shared across all business verticals.",
+            details: [
+              "Audit Service: Immutable logging of all actions for regulatory compliance.",
+              "Secure Doc Storage: Encrypted vault for e-Statements, Policies & Contracts.",
+              "Risk Engine: Real-time fraud detection & transaction monitoring.",
+              "API Gateway: Orchestration, Rate Limiting & Circuit Breaking."
+            ],
+            deployment: "Containerized Microservices. Strict network segregation (DMZ vs Internal App Zone).",
+            malaysiaContext: "Data Sovereignty: All PII and Audit Logs must strictly reside in Malaysian Data Centers. Cloud usage requires local zones (e.g., AWS my-central-1)."
+          },
+          cdp: {
+            title: "Customer Data Platform (CDP)",
+            backbaseMap: "Engagement & Intelligence",
+            icon: <PieChart className="w-6 h-6 text-teal-600" />,
+            role: "360° Customer Intelligence",
+            tech: "Data Lakehouse (Snowflake / Databricks) + Real-time Stream (Kafka)",
+            archModel: "Lambda Architecture (Batch + Speed Layer)\n• Concept: Aggregates static data (Holdings) and dynamic events (Behaviors) for real-time personalization.",
+            details: [
+              "Product Holdings: Caches account balances, insurance policies, and loan status from Core Banking.",
+              "Behaviors: Ingests real-time clickstream events (e.g., 'Viewed Takaful Page').",
+              "Profile Unification: Merges data to create a 'Segment of One'."
+            ],
+            deployment: "Separated storage and compute scaling. PII data is masked/tokenized at ingestion.",
+            malaysiaContext: "Strict PDPA compliance required. Consent management (Opt-in) flags are checked before activating any personalization features."
+          },
+          integration: {
+            title: "External Integration Services",
+            backbaseMap: "Grand Central / Integration Services",
+            icon: <Network className="w-6 h-6 text-pink-600" />,
+            role: "Downstream Systems",
+            tech: "ISO 20022 / SOAP / REST / Mainframe Connectors",
+            archModel: "Anti-Corruption Layer (ACL)\n• Concept: Mediation layer that translates domain concepts between the modern Microservices and legacy/external systems.",
+            details: [
+              "PayNet (RPP/DuitNow): Real-time national payments infrastructure.",
+              "Card Management System (CMS): Issuance & authorization.",
+              "Core Banking (CBS): Legacy ledger and account management.",
+              "Credit Bureaus (CTOS/CCRIS): External credit scoring."
+            ],
+            deployment: "Dedicated leased lines (MPLS) for PayNet/Core Banking. Mutual TLS (mTLS) for internet-facing partners.",
+            malaysiaContext: "Strict adherence to PayNet operational guidelines (availability/latency) and BNM DIT rules for outsourcing."
+          }
+        };
+
+        const sequenceSteps = [
+          { 
+            step: 1, 
+            nodeId: 'host',
+            actor: "User", 
+            action: "Taps Mini-App Icon", 
+            desc: "Triggers initialization of the MFE Container.", 
+            backbaseMap: "Mobile SDK Launcher", 
+            icon: <Smartphone className="text-blue-500" />, 
+            target: "Host App" 
+          },
+          { 
+            step: 2, 
+            nodeId: 'container',
+            actor: "Host App", 
+            action: "Load Secure Container", 
+            desc: "Checks Integrity, initializes WebView, injects Bridge JS.", 
+            backbaseMap: "Mobile SDK Web Container", 
+            icon: <Box className="text-orange-500" />, 
+            target: "Container" 
+          },
+          { 
+            step: 3, 
+            nodeId: 'bridge',
+            actor: "MFE", 
+            action: "Bridge Handshake", 
+            desc: "MFE loads and sends `init()` signal. Host validates origin domain.", 
+            backbaseMap: "Native Bridge", 
+            icon: <Layers className="text-purple-500" />, 
+            target: "Bridge" 
+          },
+          { 
+            step: 4, 
+            nodeId: 'host',
+            actor: "MFE", 
+            action: "Request Auth Token", 
+            desc: "MFE requests `getScopedToken('read_access')`.", 
+            backbaseMap: "Web SDK (Auth)", 
+            icon: <Key className="text-yellow-500" />, 
+            target: "Host App" 
+          },
+          { 
+            step: 5, 
+            nodeId: 'token',
+            actor: "Host App", 
+            action: "Token Exchange", 
+            desc: "Host validates session, calls IdP to mint short-lived JWT for Partner.", 
+            backbaseMap: "Backbase Identity", 
+            icon: <Server className="text-indigo-500" />, 
+            target: "Token Svc" 
+          },
+          { 
+            step: 6, 
+            nodeId: 'bridge',
+            actor: "Bridge", 
+            action: "Return Token", 
+            desc: "Host sends JWT back to MFE via `postMessage`.", 
+            backbaseMap: "Backbase Identity", 
+            icon: <ArrowDown className="text-green-500" />, 
+            target: "MFE" 
+          },
+          { 
+            step: 7, 
+            nodeId: 'gateway',
+            actor: "MFE", 
+            action: "Call Partner API", 
+            desc: "MFE calls API Gateway with `Authorization: Bearer <JWT>`.", 
+            backbaseMap: "Edge Service (Gateway)", 
+            icon: <Wifi className="text-slate-500" />, 
+            target: "Backend" 
+          }
+        ];
+
+        const partnershipModels = [
+          {
+            title: "Commercial & Settlement",
+            icon: <Briefcase className="w-5 h-5 text-emerald-600" />,
+            description: "Defining the money flow and reconciliation logic.",
+            points: ["Revenue Share (MDR) vs Fixed Fee", "T+1 Settlement Cycles", "Auto-Reconciliation Reports", "Dispute Management Portal"]
+          },
+          {
+            title: "Risk & Governance",
+            icon: <Scale className="w-5 h-5 text-rose-600" />,
+            description: "Ensuring regulatory compliance (BNM/PDPA).",
+            points: ["PDPA Consent Clauses (Explicit Opt-in)", "Annual VAPT Requirement for Partner APIs", "Incident SLA (L2/L3 Support)", "Data Residency Confirmation"]
+          },
+          {
+            title: "User Experience (UX)",
+            icon: <Handshake className="w-5 h-5 text-cyan-600" />,
+            description: "Maintaining the 'Bank Grade' look and feel.",
+            points: ["Unified UI/UX Guidelines (Fonts/Colors)", "SSO (Single Sign-On) seamless transition", "Loading State Standards", "Error Handling (Friendly Messages)"]
+          }
+        ];
+
+        // Helper component for Collapsible Sections inside the sidebar
+        const SidebarSection = ({ title, icon: Icon, children, isOpen, onToggle }) => (
+          <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden shadow-sm transition-all duration-200">
+            <button 
+              onClick={onToggle}
+              className="w-full flex items-center justify-between p-4 hover:bg-slate-100 transition-colors bg-white/50"
+            >
+              <div className="flex items-center">
+                {Icon && <Icon className="w-4 h-4 text-blue-600 mr-2" />}
+                <h4 className="text-xs uppercase tracking-wider text-slate-500 font-bold">{title}</h4>
+              </div>
+              {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+      
+            {isOpen && (
+              <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-slate-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                {children}
+              </div>
+            )}
+          </div>
+        );
+
+        return (
+          <div className="flex flex-col h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+            {/* Header */}
+            <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between shadow-sm z-20 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="bg-blue-600 p-2 rounded-lg shadow-sm">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-800">BankGenius <span className="text-blue-600">SuperApp</span></h1>
+                  <p className="text-xs text-slate-500">Interactive Solution Architecture • BNM Compliant Design</p>
+                </div>
+              </div>
+              <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500">
+                <span className="flex items-center"><Lock className="w-3 h-3 mr-1" /> Secure Enclave</span>
+                <span className="flex items-center"><Activity className="w-3 h-3 mr-1" /> 99.9% Uptime</span>
+              </div>
+            </header>
+
+            <div className="flex flex-1 overflow-hidden relative">
+        
+              {/* Fixed Left Navigation Menu (Collapsible) */}
+              <nav 
+                className={`bg-white border-r border-slate-200 flex flex-col items-start py-4 shrink-0 z-30 transition-all duration-300 relative
+                  ${isNavExpanded ? 'w-64' : 'w-20'}`}
+              >
+                {/* Collapse Toggle */}
+                <button 
+                  onClick={() => setIsNavExpanded(!isNavExpanded)}
+                  className="absolute -right-3 top-6 bg-white border border-slate-200 rounded-full p-1 text-slate-500 hover:text-blue-600 hover:bg-slate-50 shadow-md z-40"
+                >
+                  {isNavExpanded ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+
+                <div className={`px-6 mb-6 mt-2 text-xs font-bold text-slate-400 uppercase tracking-wider transition-opacity duration-300 ${isNavExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                  Navigation
+                </div>
+          
+                <button 
+                  onClick={() => scrollToSection(archRef, 'arch')}
+                  className={`w-full px-6 py-3 flex items-center space-x-4 transition-all duration-200 border-l-4 group
+                    ${activeSection === 'arch' 
+                      ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                      : 'border-transparent text-slate-500 hover:text-blue-600 hover:bg-slate-50'}`}
+                  title="Architecture"
+                >
+                  <Layout className={`w-6 h-6 shrink-0 group-hover:scale-110 transition-transform ${!isNavExpanded && "mx-auto"}`} />
+                  <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isNavExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0 overflow-hidden'}`}>Architecture</span>
+                </button>
+          
+                <button 
+                   onClick={() => scrollToSection(flowRef, 'flow')}
+                   className={`w-full px-6 py-3 flex items-center space-x-4 transition-all duration-200 border-l-4 group
+                    ${activeSection === 'flow' 
+                      ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                      : 'border-transparent text-slate-500 hover:text-purple-600 hover:bg-slate-50'}`}
+                   title="Integration & Deploy"
+                >
+                  <Rocket className={`w-6 h-6 shrink-0 group-hover:scale-110 transition-transform ${!isNavExpanded && "mx-auto"}`} />
+                  <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isNavExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0 overflow-hidden'}`}>Integration & Deploy</span>
+                </button>
+          
+                <button 
+                   onClick={() => scrollToSection(partnerRef, 'partner')}
+                   className={`w-full px-6 py-3 flex items-center space-x-4 transition-all duration-200 border-l-4 group
+                    ${activeSection === 'partner' 
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                      : 'border-transparent text-slate-500 hover:text-emerald-600 hover:bg-slate-50'}`}
+                   title="Partnership Model"
+                >
+                  <Users className={`w-6 h-6 shrink-0 group-hover:scale-110 transition-transform ${!isNavExpanded && "mx-auto"}`} />
+                  <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isNavExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0 overflow-hidden'}`}>Partnership Model</span>
+                </button>
+              </nav>
+
+              {/* Main Scrollable Content */}
+              <main className="flex-1 relative bg-slate-50 overflow-y-auto scroll-smooth">
+          
+                {/* Background Grid — removed */}
+
+                <div className="p-8 max-w-6xl mx-auto pb-32">
+
+                  {/* --- SECTION 1: HYBRID SUPER APP ARCHITECTURE --- */}
+                  <div ref={archRef} className="flex flex-col justify-center mb-4 pt-6">
+                    <div className="text-center mb-6">
+                      <h2 className="text-3xl font-light text-slate-800">1. Hybrid Super App Architecture</h2>
+                      <p className="text-slate-500 mt-2">Runtime Environment View</p>
+                    </div>
+
+                    {/* Host App Frame */}
+                    <div className="border-4 border-slate-300 rounded-3xl p-8 relative bg-white/60 backdrop-blur-sm mb-4 shadow-sm">
+                      <div className="absolute -top-4 left-8 bg-white px-4 text-blue-600 font-bold border border-slate-200 rounded-lg flex items-center shadow-md">
+                          <Smartphone className="w-4 h-4 mr-2" /> Host App (Super App Binary)
+                      </div>
+
+                      <div className="flex flex-col md:flex-row items-stretch justify-center gap-6 h-auto">
+                    
+                          {/* Host Native Core */}
+                          <div 
+                            onClick={() => { setSelectedNode('host'); setIsDetailsOpen(true); }}
+                            className={`flex-1 min-w-[200px] border-2 rounded-xl p-6 cursor-pointer transition-all duration-300 relative group flex flex-col items-center justify-center shadow-sm
+                              ${selectedNode === 'host' 
+                                ? 'border-blue-500 bg-blue-50 shadow-[0_0_20px_rgba(59,130,246,0.2)] scale-105' 
+                                : 'border-slate-200 bg-white hover:border-blue-400 hover:scale-[1.02]'}`}
+                          >
+                            <div className="mb-4 p-3 bg-blue-50 rounded-full border border-blue-100">
+                              <Shield className={`w-8 h-8 ${selectedNode === 'host' ? 'text-blue-600' : 'text-slate-400'}`} />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 text-center">Native Core</h3>
+                            <p className="text-xs text-slate-500 mt-1 text-center">Auth, Bio, Storage</p>
+                      
+                            <div className="hidden md:block absolute top-1/2 -right-6 transform -translate-y-1/2 z-20">
+                              <ArrowRight className="w-6 h-6 text-slate-400" />
+                            </div>
+                          </div>
+
+                          {/* Bridge Block */}
+                          <div 
+                            onClick={() => { setSelectedNode('bridge'); setIsDetailsOpen(true); }}
+                            className={`w-full md:w-40 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-all duration-300 flex flex-col justify-center items-center relative
+                              ${selectedNode === 'bridge' 
+                                ? 'border-purple-500 bg-purple-50 shadow-[0_0_20px_rgba(168,85,247,0.2)] scale-105' 
+                                : 'border-slate-300 bg-transparent hover:border-purple-400 hover:scale-[1.02]'}`}
+                          >
+                            <Layers className={`w-8 h-8 mb-2 ${selectedNode === 'bridge' ? 'text-purple-600' : 'text-slate-400'}`} />
+                            <div className="text-center leading-tight">
+                              <h4 className="font-bold text-slate-800 text-sm">JS Bridge</h4>
+                              <p className="text-[10px] text-slate-500 mt-1">Message Bus</p>
+                            </div>
+
+                            <div className="hidden md:block absolute top-1/2 -right-6 transform -translate-y-1/2 z-20">
+                              <ArrowRight className="w-6 h-6 text-slate-400" />
+                            </div>
+                          </div>
+
+                          {/* Secure Container Block */}
+                          <div 
+                            onClick={() => { setSelectedNode('container'); setIsDetailsOpen(true); }}
+                            className={`flex-1 min-w-[300px] border-2 rounded-xl p-3 cursor-pointer transition-all duration-300 relative flex flex-col gap-2 shadow-sm
+                              ${selectedNode === 'container' 
+                                ? 'border-orange-500 bg-orange-50 shadow-[0_0_20px_rgba(249,115,22,0.2)] scale-105' 
+                                : 'border-slate-200 bg-white hover:border-orange-400 hover:scale-[1.02]'}`}
+                          >
+                            <div className="absolute -top-3 right-4 bg-white px-2 text-orange-600 text-xs font-bold border border-orange-200 rounded shadow-sm">Secure Sandbox</div>
+                      
+                            <div className="w-full bg-slate-50 border border-red-200 rounded p-1.5 flex items-center justify-center space-x-2">
+                                <Shield className="w-3 h-3 text-red-500" />
+                                <span className="text-[10px] font-mono text-red-700 uppercase tracking-wide">Security Layer</span>
+                            </div>
+
+                            <div className="flex-1 w-full bg-slate-50 border border-slate-200 rounded p-2 flex flex-col relative">
+                                 <div className="flex items-center justify-center space-x-2 mb-2">
+                                    <Cpu className="w-3 h-3 text-slate-500" />
+                                    <span className="text-[10px] font-bold text-slate-600 uppercase text-center">Runtime Engine</span>
+                                 </div>
+
+                                <div 
+                                    onClick={(e) => { e.stopPropagation(); setSelectedNode('mfe'); setIsDetailsOpen(true); }}
+                                    className={`w-full p-3 border rounded-lg bg-white relative transition-all duration-300 flex flex-col items-center
+                                    ${selectedNode === 'mfe' 
+                                        ? 'border-green-500 shadow-md bg-green-50' 
+                                        : 'border-slate-200 hover:border-green-400 shadow-sm'}`}
+                                >
+                                    <Globe className={`w-6 h-6 mb-1 ${selectedNode === 'mfe' ? 'text-green-600' : 'text-slate-400'}`} />
+                                    <h4 className="font-bold text-slate-800 text-xs">3rd Party MFE</h4>
+                                </div>
+                            </div>
+
+                            <div className="w-full bg-purple-50 border border-purple-200 rounded p-1.5 flex items-center justify-center space-x-2">
+                                <Layers className="w-3 h-3 text-purple-500" />
+                                <span className="text-[10px] font-mono text-purple-700 uppercase tracking-wide">Bridge Layer</span>
+                            </div>
+                          </div>
+                      </div>
+                    </div>
+
+                    {/* OIDC API Gateway Layer */}
+                    <div className="flex flex-col items-center justify-center relative my-1">
+                       <div className="hidden md:block w-0.5 h-6 border-l-2 border-dashed border-slate-400"></div>
+                       <div 
+                          onClick={() => { setSelectedNode('gateway'); setIsDetailsOpen(true); }}
+                          className={`w-full max-w-lg p-3 border-2 rounded-xl flex items-center justify-center space-x-4 cursor-pointer transition-all duration-300 relative z-10 my-1 shadow-sm
+                          ${selectedNode === 'gateway' 
+                              ? 'border-cyan-500 bg-cyan-50 shadow-[0_0_20px_rgba(34,211,238,0.2)]' 
+                              : 'border-slate-300 bg-white hover:border-cyan-400'}`}
+                       >
+                           <div className="p-2 bg-slate-50 rounded-lg border border-slate-200">
+                               <Shield className={`w-5 h-5 ${selectedNode === 'gateway' ? 'text-cyan-600' : 'text-slate-400'}`} />
+                           </div>
+                           <div className="text-center md:text-left">
+                               <h3 className="font-bold text-slate-800 text-sm">OIDC-compliant API Layer</h3>
+                               <p className="text-[10px] text-slate-500">Secure Edge Entry Point (Gateway)</p>
+                           </div>
+                       </div>
+                       <div className="hidden md:block w-0.5 h-6 border-l-2 border-dashed border-slate-400"></div>
+                    </div>
+
+                    {/* Digital Banking Platform Wrapper */}
+                    <div className="flex flex-col items-center mt-2 relative">
+                        <div className="border-4 border-indigo-200 bg-white/60 rounded-3xl p-8 relative w-full shadow-sm">
+                            <div className="absolute -top-4 left-8 bg-white px-4 text-indigo-700 font-bold border border-indigo-200 rounded-lg shadow-md flex items-center">
+                                <Server className="w-4 h-4 mr-2" /> Digital Banking Platform
+                            </div>
+
+                            {/* Optimized Tight Four-Column Grid Layout - Set items-stretch to force equal height */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+                        
+                              {/* Column 1: Identity & Access (IAM) */}
+                              <div className="min-w-0 h-full">
+                                  <div className="border-2 border-slate-200 rounded-xl p-3 relative bg-slate-50/50 h-full flex flex-col shadow-inner">
+                                      <div className="absolute -top-3 left-4 bg-white px-2 text-yellow-600 text-[9px] font-bold border border-yellow-200 rounded uppercase tracking-wider shadow-sm">IAM</div>
+                                      <div className="flex flex-col gap-2.5 pt-1 h-full">
+                                          <div 
+                                              onClick={() => { setSelectedNode('idp'); setIsDetailsOpen(true); }}
+                                              className={`flex-1 p-3 border-2 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 shadow-sm
+                                              ${selectedNode === 'idp' ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-white hover:border-yellow-300 hover:bg-yellow-50/20'}`}
+                                          >
+                                              <Fingerprint className={`w-6 h-6 mb-1 ${selectedNode === 'idp' ? 'text-yellow-600' : 'text-slate-400'}`} />
+                                              <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-tight">IdP</h3>
+                                          </div>
+                                          <div 
+                                              onClick={() => { setSelectedNode('token'); setIsDetailsOpen(true); }}
+                                              className={`flex-1 p-3 border-2 rounded-lg flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 shadow-sm
+                                              ${selectedNode === 'token' ? 'border-yellow-300 bg-yellow-50' : 'border-slate-200 bg-white hover:border-yellow-300 hover:bg-yellow-50/20'}`}
+                                          >
+                                              <Key className={`w-6 h-6 mb-1 ${selectedNode === 'token' ? 'text-yellow-500' : 'text-slate-400'}`} />
+                                              <h3 className="font-bold text-slate-800 text-[10px] uppercase tracking-tight">Token Svc</h3>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              {/* Column 2: Digital Banking Microservices */}
+                              <div className="min-w-0 h-full">
+                                  <div 
+                                      onClick={() => { setSelectedNode('microservices'); setIsDetailsOpen(true); }}
+                                      className={`border-2 rounded-xl p-4 relative bg-slate-50/50 h-full flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 shadow-sm
+                                      ${selectedNode === 'microservices' ? 'border-blue-400 bg-blue-50 shadow-md' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/20'}`}
+                                  >
+                                      <div className="absolute -top-3 left-4 bg-white px-2 text-blue-600 text-[9px] font-bold border border-blue-200 rounded uppercase tracking-wider shadow-sm">Logic</div>
+                                      <Zap className={`w-8 h-8 mb-3 ${selectedNode === 'microservices' ? 'text-blue-600' : 'text-slate-400'}`} />
+                                      <h3 className="font-bold text-slate-800 text-xs mb-2 leading-tight">Banking Microservices</h3>
+                                      <div className="w-full flex flex-col gap-1.5">
+                                          <div className="text-[9px] text-slate-600 bg-white px-2 py-1 rounded border border-slate-200">Accounts & Balances</div>
+                                          <div className="text-[9px] text-slate-600 bg-white px-2 py-1 rounded border border-slate-200">Card Management</div>
+                                          <div className="text-[9px] text-slate-600 bg-white px-2 py-1 rounded border border-slate-200">Payment Orchestrator</div>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              {/* Column 3: Audit & Common Services - h-full ensures height alignment */}
+                              <div className="min-w-0 h-full">
+                                  <div 
+                                      onClick={() => { setSelectedNode('backend'); setIsDetailsOpen(true); }}
+                                      className={`border-2 rounded-xl p-4 relative bg-slate-50/50 h-full flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 shadow-sm
+                                      ${selectedNode === 'backend' ? 'border-indigo-400 bg-indigo-50 shadow-md' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20'}`}
+                                  >
+                                      <div className="absolute -top-3 left-4 bg-white px-2 text-indigo-600 text-[9px] font-bold border border-indigo-200 rounded uppercase tracking-wider shadow-sm">Common</div>
+                                      <Database className={`w-8 h-8 mb-3 ${selectedNode === 'backend' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                      <h3 className="font-bold text-slate-800 text-xs mb-2 leading-tight">Audit & Shared</h3>
+                                      <div className="flex flex-col gap-1 items-start text-left w-full pl-1">
+                                          <div className="text-[9px] text-slate-600 leading-tight flex items-center">• Immutable Logs</div>
+                                          <div className="text-[9px] text-slate-600 leading-tight flex items-center">• Risk & Fraud Engine</div>
+                                          <div className="text-[9px] text-slate-600 leading-tight flex items-center">• API Orchestration</div>
+                                      </div>
+                                  </div>
+                              </div>
+
+                              {/* Column 4: CDP */}
+                              <div className="min-w-0 h-full">
+                                   <div 
+                                      onClick={() => { setSelectedNode('cdp'); setIsDetailsOpen(true); }}
+                                      className={`border-2 rounded-xl p-4 relative bg-slate-50/50 h-full flex flex-col cursor-pointer transition-all duration-300 shadow-sm
+                                      ${selectedNode === 'cdp' ? 'border-teal-400 bg-teal-50 shadow-md' : 'border-slate-200 hover:border-teal-300 hover:bg-teal-50/20'}`}
+                                   >
+                                        <div className="absolute -top-3 left-4 bg-white px-2 text-teal-600 text-[9px] font-bold border border-teal-200 rounded uppercase tracking-wider shadow-sm">Data</div>
+                                        <div className="flex flex-col items-center justify-center mb-3">
+                                            <PieChart className={`w-8 h-8 ${selectedNode === 'cdp' ? 'text-teal-600' : 'text-slate-400'}`} />
+                                            <span className="mt-1.5 font-bold text-slate-800 text-[11px] tracking-tight uppercase">CDP</span>
+                                        </div>
+                                        <div className="flex flex-col gap-2 mt-auto">
+                                            <div className="bg-white rounded-lg p-2 border border-slate-200 flex items-center space-x-2 transition-colors">
+                                                <Database className="w-3.5 h-3.5 text-teal-600" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-bold text-slate-700">Holdings</span>
+                                                    <span className="text-[7px] text-slate-500">Asset Views</span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white rounded-lg p-2 border border-slate-200 flex items-center space-x-2 transition-colors">
+                                                <MousePointer className="w-3.5 h-3.5 text-teal-600" />
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-bold text-slate-700">Behaviors</span>
+                                                    <span className="text-[7px] text-slate-500">Event Stream</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                   </div>
+                              </div>
+
+                            </div>
+                        </div>
+
+                        {/* Connector Arrow to Integration */}
+                        <ArrowDown className="w-8 h-8 text-slate-400 animate-bounce mt-4" />
+
+                        {/* Integration Services */}
+                        <div className="w-full max-w-2xl mt-1">
+                             <div 
+                                onClick={() => { setSelectedNode('integration'); setIsDetailsOpen(true); }}
+                                className={`w-full p-4 border-2 rounded-xl flex items-center justify-center space-x-8 cursor-pointer transition-all duration-300 shadow-sm
+                                ${selectedNode === 'integration' 
+                                    ? 'border-pink-500 bg-pink-50 shadow-md' 
+                                    : 'border-slate-300 bg-white hover:border-pink-400 hover:scale-[1.01]'}`}
+                            >
+                                <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 shadow-sm">
+                                    <Network className={`w-7 h-7 ${selectedNode === 'integration' ? 'text-pink-600' : 'text-slate-400'}`} />
+                                </div>
+                                <div className="text-left">
+                                    <h3 className="font-bold text-slate-800 text-base leading-tight">External Integration Services</h3>
+                                    <p className="text-xs text-slate-500">PayNet • CBS (Core Banking) • CMS (Cards) • Credit Bureaus (CTOS/CCRIS)</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                  </div>
+
+                  <div className="w-full h-px bg-slate-200 my-6"></div>
+
+                  {/* --- SECTION 2: INTEGRATION & DEPLOYMENT — SWIMLANE --- */}
+                  <div ref={flowRef} className="pt-8 pb-4">
+                    <div className="text-center mb-6">
+                      <h2 className="text-3xl font-light text-slate-800">2. Integration &amp; Deployment</h2>
+                      <p className="text-slate-500 mt-2">End-to-End Handshake &amp; Release Strategy — Swimlane View</p>
+                    </div>
+
+                     {/* ── Swimlane + Step Reference side-by-side ── */}
+                    {(() => {
+                      const LANE_W = 138;
+                      const HEADER_H = 62;
+                      const ROW_H = 96;
+                      const PAD = 18;
+                      const CR = 17;
+
+                      const lanes = [
+                        { id: 'user',    label: 'User',            sub: 'Initiator',      color: '#3b82f6', bg: '#EFF6FF' },
+                        { id: 'host',    label: 'Host App',         sub: 'Native Core',    color: '#7c3aed', bg: '#F5F3FF' },
+                        { id: 'bridge',  label: 'JS Bridge',        sub: 'Secure Channel', color: '#9333ea', bg: '#FAF5FF' },
+                        { id: 'mfe',     label: 'MFE / Container',  sub: 'Sandbox',        color: '#16a34a', bg: '#F0FDF4' },
+                        { id: 'token',   label: 'Token Service',    sub: 'IdP / Auth',     color: '#d97706', bg: '#FFFBEB' },
+                        { id: 'gateway', label: 'API Gateway',      sub: 'Edge Security',  color: '#0891b2', bg: '#ECFEFF' },
+                      ];
+
+                      const stepFlow = [
+                        { from: 'user',   to: 'host'    },
+                        { from: 'host',   to: 'mfe'     },
+                        { from: 'mfe',    to: 'bridge'  },
+                        { from: 'mfe',    to: 'host'    },
+                        { from: 'host',   to: 'token'   },
+                        { from: 'bridge', to: 'mfe'     },
+                        { from: 'mfe',    to: 'gateway' },
+                      ];
+
+                      const stepColors = ['#3b82f6','#7c3aed','#9333ea','#7c3aed','#7c3aed','#9333ea','#16a34a'];
+
+                      const W = PAD + lanes.length * LANE_W + PAD;
+                      const H = HEADER_H + sequenceSteps.length * ROW_H + PAD;
+                      const lx = (id) => PAD + lanes.findIndex(l => l.id === id) * LANE_W + LANE_W / 2;
+                      const li = (id) => lanes.findIndex(l => l.id === id);
+                      const ry = (row) => HEADER_H + row * ROW_H + ROW_H / 2;
+
+                      return (
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', overflowX: 'auto', paddingBottom: '8px' }}>
+
+                          {/* Left — Swimlane SVG */}
+                          <div style={{ flexShrink: 0 }}>
+                            <svg
+                              viewBox={`0 0 ${W} ${H}`}
+                              width={W} height={H}
+                              xmlns="http://www.w3.org/2000/svg"
+                              style={{ display: 'block', fontFamily: 'inherit' }}
+                            >
+                              <defs>
+                                {lanes.map(lane => (
+                                  <marker key={lane.id} id={`arr-${lane.id}`}
+                                    viewBox="0 0 10 10" refX="8" refY="5"
+                                    markerWidth="5" markerHeight="5" orient="auto">
+                                    <path d="M0,0 L10,5 L0,10 Z" fill={lane.color} />
+                                  </marker>
+                                ))}
+                              </defs>
+
+                              {lanes.map((lane, i) => (
+                                <rect key={lane.id}
+                                  x={PAD + i * LANE_W} y={0} width={LANE_W} height={H}
+                                  fill={lane.bg} stroke="#E2E8F0" strokeWidth="1" />
+                              ))}
+
+                              {lanes.map((lane, i) => (
+                                <g key={lane.id}>
+                                  <rect x={PAD + i * LANE_W} y={0} width={LANE_W} height={HEADER_H}
+                                        fill={lane.color} opacity="0.1" />
+                                  <rect x={PAD + i * LANE_W} y={0} width={LANE_W} height={4}
+                                        fill={lane.color} />
+                                  <text x={lx(lane.id)} y={26} textAnchor="middle"
+                                        fontSize="11" fontWeight="700" fill={lane.color}>{lane.label}</text>
+                                  <text x={lx(lane.id)} y={44} textAnchor="middle"
+                                        fontSize="9" fill="#64748B">{lane.sub}</text>
+                                </g>
+                              ))}
+
+                              {lanes.map(lane => (
+                                <line key={lane.id}
+                                  x1={lx(lane.id)} y1={HEADER_H + 2}
+                                  x2={lx(lane.id)} y2={H - PAD + 8}
+                                  stroke={lane.color} strokeWidth="1"
+                                  strokeDasharray="3,6" opacity="0.3" />
+                              ))}
+
+                              {sequenceSteps.map((_, i) => (
+                                <line key={i}
+                                  x1={PAD} y1={HEADER_H + i * ROW_H}
+                                  x2={W - PAD} y2={HEADER_H + i * ROW_H}
+                                  stroke="#E2E8F0" strokeWidth="0.5" />
+                              ))}
+
+                              {stepFlow.map((def, idx) => {
+                                const step     = sequenceSteps[idx];
+                                const fromLane = lanes.find(l => l.id === def.from);
+                                const toLane   = lanes.find(l => l.id === def.to);
+                                const y        = ry(idx);
+                                const fx       = lx(def.from);
+                                const tx       = lx(def.to);
+                                const goRight  = tx > fx;
+                                const ax1      = goRight ? fx + CR + 3 : fx - CR - 3;
+                                const ax2      = goRight ? tx - CR - 5 : tx + CR + 5;
+                                const midX     = (fx + tx) / 2;
+                                const isSelected = selectedNode === step.nodeId;
+                                const labelStr = step.action.length > 19 ? step.action.slice(0, 19) + '\u2026' : step.action;
+
+                                return (
+                                  <g key={idx} style={{ cursor: 'pointer' }}
+                                     onClick={() => { setSelectedNode(step.nodeId); setIsDetailsOpen(true); }}>
+                                    {isSelected && (
+                                      <rect
+                                        x={PAD + Math.min(li(def.from), li(def.to)) * LANE_W}
+                                        y={y - ROW_H / 2}
+                                        width={Math.abs(li(def.to) - li(def.from)) * LANE_W + LANE_W}
+                                        height={ROW_H}
+                                        fill={fromLane.color} opacity="0.07" />
+                                    )}
+                                    <line x1={ax1} y1={y} x2={ax2} y2={y}
+                                          stroke={fromLane.color}
+                                          strokeWidth={isSelected ? 2.5 : 1.8}
+                                          markerEnd={`url(#arr-${def.from})`}
+                                          opacity={isSelected ? 1 : 0.72} />
+                                    <rect x={midX - 54} y={y - 24} width={108} height={16}
+                                          fill="white" rx="4" opacity="0.94"
+                                          stroke={fromLane.color} strokeWidth="0.5" strokeOpacity="0.4" />
+                                    <text x={midX} y={y - 12} textAnchor="middle"
+                                          fontSize="9" fontWeight="600" fill={fromLane.color}>{labelStr}</text>
+                                    <circle cx={fx} cy={y} r={CR}
+                                            fill={isSelected ? fromLane.color : 'white'}
+                                            stroke={fromLane.color} strokeWidth={isSelected ? 0 : 2} />
+                                    <text x={fx} y={y + 5} textAnchor="middle"
+                                          fontSize="11" fontWeight="800"
+                                          fill={isSelected ? 'white' : fromLane.color}>{idx + 1}</text>
+                                    <circle cx={tx} cy={y} r={7}
+                                            fill={toLane.color} opacity="0.25"
+                                            stroke={toLane.color} strokeWidth="1.5" />
+                                  </g>
+                                );
+                              })}
+                            </svg>
+                          </div>
+
+                          {/* Right — Step Reference panel */}
+                          <div style={{ flexShrink: 0, width: '260px', overflowY: 'auto', maxHeight: H + 'px' }}>
+                            <p style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8',
+                                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                                        marginBottom: '8px', position: 'sticky', top: 0,
+                                        background: '#F8FAFC', padding: '4px 0' }}>
+                              Step Reference — click to view detail
+                            </p>
+                            {sequenceSteps.map((step, idx) => {
+                              const isSelected = selectedNode === step.nodeId;
+                              return (
+                                <div key={idx}
+                                  onClick={() => { setSelectedNode(step.nodeId); setIsDetailsOpen(true); }}
+                                  style={{ marginBottom: '6px', cursor: 'pointer' }}
+                                  className={`flex items-start gap-2 p-2.5 rounded-lg border transition-all duration-200
+                                    ${isSelected
+                                      ? 'bg-blue-50 border-blue-400 shadow-sm'
+                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'}`}>
+                                  <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                                        style={{ backgroundColor: stepColors[idx] }}>
+                                    {idx + 1}
+                                  </span>
+                                  <div style={{ minWidth: 0 }}>
+                                    <p style={{ fontSize: '10px', color: '#64748B', margin: 0 }}>{step.actor} → {step.target}</p>
+                                    <p style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', margin: '1px 0' }}>{step.action}</p>
+                                    <p style={{ fontSize: '11px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>{step.desc}</p>
+                                    {step.backbaseMap && (
+                                      <span style={{ display: 'inline-block', marginTop: '4px', padding: '1px 5px',
+                                                     borderRadius: '3px', fontSize: '9px', fontWeight: 700,
+                                                     textTransform: 'uppercase', letterSpacing: '0.05em',
+                                                     background: '#EFF6FF', color: '#2563EB',
+                                                     border: '1px solid #BFDBFE' }}>
+                                        {step.backbaseMap}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── 2b. Hardened WebView Integration Approach ── */}
+                    <div className="mt-8 px-2">
+
+                      {/* heading */}
+                      <div className="text-center mb-4">
+                        <h3 className="text-xl font-semibold text-slate-700">2b. Hardened WebView Integration Approach</h3>
+                        <p className="text-slate-500 text-sm mt-1">Structural isolation model for 3rd-party mini-app integration</p>
+                      </div>
+
+                      {/* ── main diagram — flex column on small, row on large ── */}
+                      <div className="flex flex-col gap-4">
+
+                        {/* HOST APP outer shell */}
+                        <div style={{ border: '2px dashed #3B82F6', borderRadius: '14px', background: '#EFF6FF', padding: '16px' }}>
+
+                          {/* host label */}
+                          <p style={{ fontSize: '11px', fontWeight: 700, color: '#3B82F6', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>
+                            HOST APP — Native Shell &nbsp;·&nbsp; Swift / Kotlin
+                          </p>
+                          <p style={{ fontSize: '10px', color: '#64748B', marginBottom: '12px' }}>
+                            Trust Anchor &nbsp;·&nbsp; RASP &nbsp;·&nbsp; DexGuard / iXGuard &nbsp;·&nbsp; OIDC Session
+                          </p>
+
+                          {/* inner row: left col + connector + webview */}
+                          <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' }}>
+
+                            {/* ── Left column: Enclave + Bridge ── */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '190px', flex: '0 0 auto' }}>
+
+                              {/* Secure Enclave */}
+                              <div style={{ border: '1.5px solid #DC2626', borderRadius: '10px', background: '#FEF2F2', padding: '12px' }}>
+                                <p style={{ fontSize: '11px', fontWeight: 700, color: '#DC2626', marginBottom: '6px' }}>🔒 Secure Enclave</p>
+                                {['Primary Bank Session', 'Biometric Keys (FaceID / FP)', 'OIDC Refresh Token'].map((t, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#DC2626', flexShrink: 0 }}/>
+                                    <span style={{ fontSize: '10px', color: '#374151' }}>{t}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* JS Bridge */}
+                              <div style={{ border: '1.5px solid #9333EA', borderRadius: '10px', background: '#FAF5FF', padding: '12px', flex: 1 }}>
+                                <p style={{ fontSize: '11px', fontWeight: 700, color: '#9333EA', marginBottom: '2px' }}>⚡ JS Bridge</p>
+                                <p style={{ fontSize: '9px', color: '#64748B', marginBottom: '6px' }}>Embedded in binary — no OTA update</p>
+                                {[
+                                  'Origin Allow-list Validator',
+                                  'postMessage Handler',
+                                  'getScopedToken() API',
+                                  'Native Intent Translator',
+                                ].map((t, i) => (
+                                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
+                                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#9333EA', flexShrink: 0 }}/>
+                                    <span style={{ fontSize: '10px', color: '#374151' }}>{t}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* ── postMessage connector ── */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px 4px', flexShrink: 0 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                                            border: '1px solid #DDD6FE', borderRadius: '8px', background: 'white',
+                                            padding: '8px 10px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 600, color: '#9333EA' }}>getScopedToken()</span>
+                                <svg width="60" height="16" viewBox="0 0 60 16" xmlns="http://www.w3.org/2000/svg">
+                                  <defs>
+                                    <marker id="c-r" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+                                      <path d="M0,0 L6,3 L0,6 Z" fill="#9333EA"/>
+                                    </marker>
+                                    <marker id="c-l" viewBox="0 0 6 6" refX="1" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+                                      <path d="M6,0 L0,3 L6,6 Z" fill="#9333EA"/>
+                                    </marker>
+                                  </defs>
+                                  <line x1="2" y1="5" x2="58" y2="5" stroke="#9333EA" strokeWidth="1.5" markerEnd="url(#c-r)"/>
+                                  <line x1="58" y1="11" x2="2" y2="11" stroke="#9333EA" strokeWidth="1.5" strokeDasharray="4,2" markerEnd="url(#c-l)"/>
+                                </svg>
+                                <span style={{ fontSize: '9px', fontWeight: 600, color: '#9333EA' }}>postMessage(JWT)</span>
+                              </div>
+                              <span style={{ fontSize: '8px', color: '#94A3B8', textAlign: 'center' }}>Steps 3 &amp; 6</span>
+                            </div>
+
+                            {/* ── Secure WebView Container ── */}
+                            <div style={{ border: '2px solid #16A34A', borderRadius: '12px', background: '#F0FDF4', padding: '12px', flex: 1, minWidth: '220px' }}>
+                              <p style={{ fontSize: '11px', fontWeight: 700, color: '#16A34A', marginBottom: '6px' }}>
+                                🛡 Secure WebView Container &nbsp;
+                                <span style={{ fontSize: '9px', fontWeight: 700, background: '#DCFCE7', color: '#15803D', padding: '1px 6px', borderRadius: '10px', border: '1px solid #86EFAC' }}>
+                                  Recommended
+                                </span>
+                              </p>
+
+                              {/* Security badges row */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px' }}>
+                                {['CSP Enforced','SRI Checks','Origin Validated','Storage Isolated','Network Allow-list'].map((b, i) => (
+                                  <span key={i} style={{ fontSize: '8.5px', fontWeight: 700, background: '#DCFCE7', color: '#15803D',
+                                                          border: '1px solid #86EFAC', borderRadius: '10px', padding: '2px 7px' }}>
+                                    {b}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* 3rd-Party MFE */}
+                              <div style={{ border: '1.5px solid #D97706', borderRadius: '10px', background: '#FFFBEB', padding: '10px', marginBottom: '8px' }}>
+                                <p style={{ fontSize: '11px', fontWeight: 700, color: '#D97706', marginBottom: '4px' }}>📦 3rd-Party Micro-Frontend (MFE)</p>
+                                <p style={{ fontSize: '9px', color: '#64748B', marginBottom: '6px' }}>Hosted on Partner CDN · React / Vue / Angular · OTA updates enabled</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                                  {[
+                                    ['Stateless','Relies on Host for context'],
+                                    ['Lazy-loaded','On-demand via Container'],
+                                    ['Independent deploy','Own release pipeline'],
+                                    ['Scoped token','Short-lived, audience-bound'],
+                                  ].map(([title, sub], i) => (
+                                    <div key={i} style={{ background: 'white', border: '1px solid #FDE68A', borderRadius: '6px', padding: '5px 7px' }}>
+                                      <p style={{ fontSize: '9px', fontWeight: 700, color: '#D97706', margin: 0 }}>{title}</p>
+                                      <p style={{ fontSize: '8px', color: '#64748B', margin: 0 }}>{sub}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                            </div>
+
+                          </div>{/* end inner row */}
+                        </div>{/* end Host App */}
+
+                        {/* ── API Gateway (external) — responsive ── */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: '10px' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+                            External (Step 7)
+                          </span>
+                          <svg width="32" height="12" viewBox="0 0 32 12" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+                            <defs>
+                              <marker id="gw-d" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+                                <path d="M0,0 L6,3 L0,6 Z" fill="#0891B2"/>
+                              </marker>
+                            </defs>
+                            <line x1="2" y1="6" x2="30" y2="6" stroke="#0891B2" strokeWidth="1.5" markerEnd="url(#gw-d)"/>
+                          </svg>
+                          <div style={{ border: '1.5px solid #0891B2', borderRadius: '8px', background: '#ECFEFF', padding: '8px 14px', flex: '1 1 auto', minWidth: '200px' }}>
+                            <p style={{ fontSize: '11px', fontWeight: 700, color: '#0891B2', margin: 0 }}>🔗 API Gateway</p>
+                            <p style={{ fontSize: '9px', color: '#64748B', margin: '3px 0 0', lineHeight: 1.5 }}>
+                              Bearer JWT validation &nbsp;·&nbsp; OIDC/mTLS &nbsp;·&nbsp; Rate Limiting &nbsp;·&nbsp; Header Sanitization
+                            </p>
+                          </div>
+                          <div style={{ flexShrink: 0, background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '6px', padding: '4px 10px' }}>
+                            <span style={{ fontSize: '9px', fontWeight: 600, color: '#92400E' }}>MFE calls with <code style={{ background: 'transparent', fontFamily: 'monospace' }}>Authorization: Bearer &lt;JWT&gt;</code></span>
+                          </div>
+                        </div>
+
+                        {/* ── Legend ── */}
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
+                          <p style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Sequence Diagram Cross-reference</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {[
+                              { step: '2', text: 'WebView init + integrity check', color: '#16A34A' },
+                              { step: '3', text: 'Bridge handshake + origin validation', color: '#9333EA' },
+                              { step: '6', text: 'Token returned via postMessage', color: '#9333EA' },
+                              { step: '7', text: 'MFE calls API Gateway with Bearer JWT', color: '#0891B2' },
+                            ].map(({ step, text, color }, i) => (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: color,
+                                               color: 'white', fontSize: '9px', fontWeight: 800,
+                                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  {step}
+                                </span>
+                                <span style={{ fontSize: '9.5px', color: '#374151' }}>{text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                      </div>{/* end flex column */}
+                    </div>
+                  </div>
+
+                  <div className="w-full h-px bg-slate-200 my-6"></div>
+
+                  {/* --- SECTION 3: PARTNERSHIP MODELS --- */}
+                  <div ref={partnerRef} className="pt-8">
+                     <div className="text-center mb-6">
+                        <h2 className="text-3xl font-light text-slate-800">3. Partnership Considerations</h2>
+                        <p className="text-slate-500 mt-2">Governance, Commercials & Operations</p>
+                     </div>
+
+                     <div className="grid md:grid-cols-3 gap-6">
+                        {partnershipModels.map((model, idx) => (
+                          <div key={idx} className="bg-white border border-slate-200 p-6 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 flex flex-col h-full shadow-sm hover:shadow-md">
+                             <div className="p-3 bg-slate-50 rounded-lg w-fit mb-4 border border-slate-200 shadow-sm">
+                                {model.icon}
+                             </div>
+                             <h3 className="text-xl font-bold text-slate-800 mb-2">{model.title}</h3>
+                             <p className="text-sm text-slate-600 mb-6 min-h-[40px]">{model.description}</p>
+                       
+                             <ul className="space-y-3 mt-auto">
+                                {model.points.map((point, pIdx) => (
+                                   <li key={pIdx} className="flex items-start text-sm text-slate-600">
+                                      <CheckCircle className="w-4 h-4 text-blue-600 mr-2 shrink-0 mt-0.5" />
+                                      <span>{point}</span>
+                                   </li>
+                                ))}
+                             </ul>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+
+                </div>
+              </main>
+
+              {/* Floating Sidebar Toggle */}
+              {!isDetailsOpen && (
+                <button 
+                  onClick={() => setIsDetailsOpen(true)}
+                  className="absolute right-0 top-32 bg-white border-l border-t border-b border-slate-200 rounded-l-lg p-3 text-slate-500 hover:text-blue-600 hover:bg-slate-50 shadow-md z-40 transition-all"
+                >
+                  <PanelRightOpen className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Detail Panel */}
+              <aside 
+                className={`bg-white border-l border-slate-200 overflow-y-auto flex flex-col shadow-xl z-20 shrink-0 transition-all duration-300 relative
+                  ${isDetailsOpen ? 'w-96' : 'w-0 border-l-0 overflow-hidden'}`}
+              >
+                  <div className="w-96 h-full flex flex-col">
+                    <div className="absolute right-4 top-4 z-10">
+                      <button onClick={() => setIsDetailsOpen(false)} className="p-1 text-slate-400 hover:text-slate-800 transition-colors">
+                        <PanelRightClose className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="p-6 sticky top-0 bg-white z-10 border-b border-slate-100">
+                        <div className="flex items-center space-x-3 pr-8">
+                            <div className="p-2 bg-slate-50 rounded-lg shrink-0 shadow-sm border border-slate-200">
+                                {architectureData[selectedNode].icon}
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800 leading-tight">{architectureData[selectedNode].title}</h2>
+                                <span className="text-xs font-mono text-slate-500 px-2 py-0.5 bg-slate-100 rounded border border-slate-200 inline-block mt-1">
+                                    {architectureData[selectedNode].role}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        {/* Collapsible Tech Stack */}
+                        <SidebarSection 
+                          title="Technology Stack" 
+                          icon={Cpu} 
+                          isOpen={expandedSections.tech} 
+                          onToggle={() => toggleSection('tech')}
+                        >
+                          <p className="text-sm text-slate-700 font-mono leading-relaxed whitespace-pre-line">
+                            {architectureData[selectedNode].tech}
+                          </p>
+                        </SidebarSection>
+                  
+                        {/* Collapsible Mapping Section - NEW */}
+                        {architectureData[selectedNode].backbaseMap && (
+                            <SidebarSection 
+                              title="Backbase Equivalent" 
+                              icon={Layers} 
+                              isOpen={expandedSections.mapping} 
+                              onToggle={() => toggleSection('mapping')}
+                            >
+                               <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
+                                   <p className="text-sm font-bold text-blue-800">
+                                      {architectureData[selectedNode].backbaseMap}
+                                   </p>
+                                   <p className="text-xs text-blue-600 mt-1">
+                                      Maps to standard Backbase component structure.
+                                   </p>
+                               </div>
+                            </SidebarSection>
+                        )}
+
+                        {/* Collapsible Trade-off Analysis (Conditional) */}
+                        {architectureData[selectedNode].optionsComparison && (
+                          <SidebarSection 
+                            title="Trade-off Analysis" 
+                            icon={GitCompare} 
+                            isOpen={expandedSections.tradeoff} 
+                            onToggle={() => toggleSection('tradeoff')}
+                          >
+                            <div className="space-y-3">
+                              {architectureData[selectedNode].optionsComparison.map((opt, idx) => (
+                                <div key={idx} className="bg-white p-3 rounded border border-slate-200 shadow-sm">
+                                  <p className="text-xs font-bold text-slate-800 mb-2">{opt.option}</p>
+                                  <div className="space-y-2">
+                                    <div className="flex items-start gap-2 text-xs text-slate-600">
+                                      <span className="text-emerald-600 font-bold text-[10px] uppercase min-w-[32px]">Pros</span>
+                                      <span className="leading-tight">{opt.pros}</span>
+                                    </div>
+                                    <div className="flex items-start gap-2 text-xs text-slate-600">
+                                      <span className="text-rose-600 font-bold text-[10px] uppercase min-w-[32px]">Cons</span>
+                                      <span className="leading-tight">{opt.cons}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </SidebarSection>
+                        )}
+
+                        {/* Collapsible Architecture Model */}
+                        <SidebarSection 
+                          title="Architecture Model" 
+                          icon={Share2} 
+                          isOpen={expandedSections.arch} 
+                          onToggle={() => toggleSection('arch')}
+                        >
+                           <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-line">
+                              {architectureData[selectedNode].archModel}
+                           </p>
+                        </SidebarSection>
+
+                        {/* Collapsible Key Responsibilities */}
+                        <SidebarSection 
+                          title="Key Responsibilities" 
+                          icon={CheckCircle} 
+                          isOpen={expandedSections.details} 
+                          onToggle={() => toggleSection('details')}
+                        >
+                          <ul className="space-y-3">
+                            {architectureData[selectedNode].details.map((detail, idx) => (
+                              <li key={idx} className="flex items-start text-sm text-slate-700">
+                                <div className="mt-1 mr-2 min-w-[6px] h-[6px] rounded-full bg-blue-500 shrink-0"></div>
+                                {detail}
+                              </li>
+                            ))}
+                          </ul>
+                        </SidebarSection>
+
+                        {/* Collapsible Architect's Note */}
+                        <SidebarSection 
+                          title="Architect's Note" 
+                          icon={AlertCircle} 
+                          isOpen={expandedSections.note} 
+                          onToggle={() => toggleSection('note')}
+                        >
+                          <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg">
+                            <p className="text-sm text-amber-800/90 italic leading-relaxed">
+                                "{architectureData[selectedNode].malaysiaContext}"
+                            </p>
+                          </div>
+                        </SidebarSection>
+
+                        {/* Action Buttons (Always Visible) */}
+                        <div className="pt-4 mt-4 border-t border-slate-200">
+                            <button className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded transition-colors flex items-center justify-center border border-slate-300">
+                                <FileText className="w-4 h-4 mr-2" /> View Spec Documentation
+                            </button>
+                        </div>
+                    </div>
+                  </div>
+              </aside>
+            </div>
+          </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<BankSuperAppArchitecture />);
+  </script>
+</body>
+</html>
