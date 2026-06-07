@@ -88,7 +88,7 @@
     const BankSuperAppArchitecture = () => {
       const [selectedNode, setSelectedNode] = useState('host');
         const [activeSection, setActiveSection] = useState('arch');
-        const [isNavExpanded, setIsNavExpanded] = useState(true);
+        const [isNavExpanded, setIsNavExpanded] = useState(false);
         const [isDetailsOpen, setIsDetailsOpen] = useState(true);
   
         // State for collapsible sidebar sections
@@ -137,25 +137,25 @@
           },
           bridge: {
             title: "Secure JS Bridge",
-            backbaseMap: "Backbase Native Bridge",
+            backbaseMap: "IFrame Communication Bridge (Backbase Web SDK)",
             icon: <Layers className="w-6 h-6 text-purple-600" />,
             role: "Communication Channel",
-            tech: "Custom JS Interface / WebViewJavascriptBridge",
-            archModel: "Event Bus / Messenger Pattern\n• Concept: Asynchronous, serializable message passing.\n• Consideration: Strictly decouples the web consumer from the native provider, preventing direct memory access.",
+            tech: "JavaScript postMessage API, WKScriptMessageHandler (iOS), WebMessagePort (Android)",
+            archModel: "Adapter / Anti-Corruption Layer\n• Concept: Asynchronous, serializable message passing.\n• Consideration: Strictly decouples the web consumer from the native provider, preventing direct memory access.",
             details: [
               "Asynchronous message passing.",
               "Allow-listing of specific 3rd party domains.",
-              "Translates generic requests (e.g., 'pay_10_myr') into native intent."
+              "Orchestrates cross-layer communication by mapping MFE requests to Native Core capabilities. (e.g., 'pay_10_myr')."
             ],
             deployment: "Embedded strictly within the Host App binary. Updates are tied to Host App release cycles (typically monthly). Cannot be updated over-the-air (OTA) due to security constraints.",
             malaysiaContext: "Critical for preventing XSS attacks. We strictly validate the 'origin' of every message. No direct DOM access allowed."
           },
           container: {
             title: "Secure Sandbox Container",
-            backbaseMap: "Mobile SDK Web Container",
+            backbaseMap: "Backbase Web SDK Container + App Config",
             icon: <Box className="w-6 h-6 text-orange-600" />,
             role: "Isolation Environment",
-            tech: "Multi-Layered Sandbox Architecture:\n• Security Layer: Enforces CSP, traffic interception, and resource integrity (SRI).\n• Runtime Engine: WebKit/Chromium instance hosting the partner logic.\n• Bridge Layer: Marshals messages between the JS world and Native Host.",
+            tech: "WKWebView (iOS), WebView2 (Android), CSP Headers, Network Interceptors",
             optionsComparison: [
               {
                 option: "Option 1: Hardened WebView",
@@ -170,7 +170,7 @@
                 cons: "Tightly coupled (SDK crash = App crash), requires App Store release for updates, dependency conflicts (e.g., conflicting Networking libraries)."
               }
             ],
-            archModel: "Sandboxed Isolation Layer\n• Concept: Zero-trust runtime environment.\n• Consideration: Guest (MFE) has no direct access to the host's memory, storage, or cookies.",
+            archModel: "Infrastructure / Security Boundary\n• Concept: Zero-trust runtime environment.\n• Consideration: Guest (MFE) has no direct access to the host's memory, storage, or cookies.",
             details: [
               "Enforces Content Security Policy (CSP) to restrict external calls.",
               "Network traffic interception & allow-listing.",
@@ -181,15 +181,16 @@
           },
           mfe: {
             title: "3rd Party Micro-Frontend",
-            backbaseMap: "Journey / Widget (Angular)",
+            backbaseMap: "Backbase Widget / Micro-Frontend (Remote Module)",
             icon: <Globe className="w-6 h-6 text-green-600" />,
             role: "Mini-App Logic",
-            tech: "React/Vue/Angular Bundle",
-            archModel: "Federated Module / Remote MFE\n• Concept: Business logic is decoupled from the shell.\n• Consideration: Loaded on-demand, allowing for independent release cycles.",
+            tech: "React / Angular / Vue (partner's choice), Webpack Module Federation, iframe fallback",
+            archModel: "Micro-Frontend / Federated Module\n• Concept: Business logic is decoupled from the shell.\n• Consideration: Loaded on-demand, allowing for independent release cycles.",
             details: [
               "Hosted independently by the partner.",
               "Lazy loaded via the Secure Container.",
-              "Stateless: Relies on Host for user context."
+              "Stateless: Relies on Host for user context.",
+              "Follow 3rd Party - SSO model wherever applicable."
             ],
             deployment: "Deployed independently to Partner's CDN. Supports Over-The-Air (OTA) updates immediately. Must be versioned to match the Bridge API capability.",
             malaysiaContext: "Allows partners (e.g., Takaful providers) to update features instantly without Bank App Store submission."
@@ -227,11 +228,11 @@
           },
           token: {
             title: "Token Exchange Service",
-            backbaseMap: "Identity Token Converter",
+            backbaseMap: "Backbase Identity (Keycloak) Token Exchange",
             icon: <Key className="w-6 h-6 text-yellow-500" />,
             role: "Auth Scope Manager",
-            tech: "OAuth2 Token Exchange (RFC 8693)",
-            archModel: "Token Mediation Pattern\n• Concept: Converts a high-privilege session (Bank User) into a low-privilege, scoped access token.",
+            tech: "OAuth 2.0 Token Exchange (RFC 8693), JWT, Backbase Identity",
+            archModel: "Security / Identity Federation\n• Concept: Converts a high-privilege session (Bank User) into a low-privilege, scoped access token.",
             details: [
               "Swaps Bank Session for scoped Mini-App Token.",
               "Audience Binding: Token only works for specific Partner APIs.",
@@ -477,10 +478,10 @@
                     ${activeSection === 'flow' 
                       ? 'border-purple-500 bg-purple-50 text-purple-700' 
                       : 'border-transparent text-slate-500 hover:text-purple-600 hover:bg-slate-50'}`}
-                   title="Integration & Deploy"
+                   title="Integration"
                 >
                   <Rocket className={`w-6 h-6 shrink-0 group-hover:scale-110 transition-transform ${!isNavExpanded && "mx-auto"}`} />
-                  <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isNavExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0 overflow-hidden'}`}>Integration & Deploy</span>
+                  <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isNavExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 w-0 overflow-hidden'}`}>Integration</span>
                 </button>
           
                 <button 
@@ -752,11 +753,92 @@
                   {/* --- SECTION 2: INTEGRATION & DEPLOYMENT — SWIMLANE --- */}
                   <div ref={flowRef} className="pt-8 pb-4">
                     <div className="text-center mb-6">
-                      <h2 className="text-3xl font-light text-slate-800">2. Integration &amp; Deployment</h2>
-                      <p className="text-slate-500 mt-2">End-to-End Handshake &amp; Release Strategy — Swimlane View</p>
+                      <h2 className="text-3xl font-light text-slate-800">2. Integration</h2>
                     </div>
 
-                     {/* ── Swimlane + Step Reference side-by-side ── */}
+                    {/* ── Reference Integration Architecture ── */}
+                    <div className="px-2">
+                      <div className="text-center mb-4">
+                        <h3 className="text-xl font-semibold text-slate-700">Reference Integration Architecture</h3>
+                        <p className="text-slate-500 text-sm mt-1">Enabling SuperApp — External Micro-web Apps</p>
+                      </div>
+                      {(() => {
+                        const entities = [
+                          { id: 'bank',    label: "Bank's App",              sub: 'powered by Backbase',        color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
+                          { id: 'idp',     label: 'Backbase / Bank Identity', sub: 'OAuth2 / OIDC',              color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+                          { id: 'mfe',     label: 'Micro Frontend',           sub: 'mfe-client · Partner-hosted', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+                          { id: 'backend', label: "Third Party's Backend",    sub: 'Partner API',                color: '#059669', bg: '#ECFDF5', border: '#A7F3D0' },
+                        ];
+                        const steps = [
+                          { step: 1, from: 0, to: 1, label: 'Login',                         ctrl: 'backbase', desc: "Bank's app requests login" },
+                          { step: 2, from: 1, to: 0, label: 'Access Token',                  ctrl: 'backbase', desc: 'Identity returns access token' },
+                          { step: 3, from: 0, to: 2, label: 'Request in-app view',            ctrl: 'backbase', desc: 'SSO-compliant if applicable' },
+                          { step: 4, from: 2, to: 3, label: 'Validate request & scope',       ctrl: 'partner',  desc: 'MFE calls partner backend' },
+                          { step: 5, from: 3, to: 1, label: '[Optional] Validate token/code', ctrl: 'partner',  desc: 'Backend validates with IdP' },
+                          { step: 6, from: 1, to: 3, label: 'Successfully validated token',   ctrl: 'backbase', desc: 'IdP confirms validation' },
+                          { step: 7, from: 3, to: 2, label: 'Generate new access token',      ctrl: 'partner',  desc: 'New token with user context + mfe-client' },
+                          { step: 8, from: 2, to: 0, label: 'Load view of services',          ctrl: 'partner',  desc: 'MFE loads into Bank App' },
+                        ];
+                        return (
+                          <div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '4px' }}>
+                              {entities.map((e) => (
+                                <div key={e.id} style={{ background: e.bg, border: `1.5px solid ${e.border}`, borderRadius: '10px', padding: '10px 8px', textAlign: 'center' }}>
+                                  <p style={{ fontSize: '11px', fontWeight: 700, color: e.color, margin: 0 }}>{e.label}</p>
+                                  <p style={{ fontSize: '9px', color: '#64748B', margin: '3px 0 0' }}>{e.sub}</p>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              {steps.map(({ step, from, to, label, ctrl, desc }) => {
+                                const isBackbase = ctrl === 'backbase';
+                                const arrowColor = isBackbase ? '#2563EB' : '#374151';
+                                const goRight = to > from;
+                                const leftCol = goRight ? from : to;
+                                const rightCol = goRight ? to : from;
+                                const spanCols = rightCol - leftCol + 1;
+                                const colStart = leftCol + 1;
+                                return (
+                                  <div key={step} style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', alignItems: 'center', minHeight: '40px' }}>
+                                    {Array.from({ length: 4 }).map((_, colIdx) => {
+                                      const inSpan = colIdx >= leftCol && colIdx <= rightCol;
+                                      if (!inSpan) return <div key={colIdx} style={{ borderRight: '1px dashed #E2E8F0', minHeight: '40px' }} />;
+                                      if (colIdx !== leftCol) return null;
+                                      return (
+                                        <div key={colIdx} style={{ gridColumn: `${colStart} / span ${spanCols}`, display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', background: isBackbase ? '#EFF6FF' : '#F9FAFB', border: `1px solid ${isBackbase ? '#BFDBFE' : '#E2E8F0'}`, borderRadius: '6px', flexDirection: goRight ? 'row' : 'row-reverse' }}>
+                                          <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: arrowColor, color: 'white', fontSize: '9px', fontWeight: 800, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{step}</span>
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ fontSize: '10px', fontWeight: 700, color: arrowColor, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{goRight ? '→' : '←'} {label}</p>
+                                            <p style={{ fontSize: '9px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>{desc}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '12px', padding: '8px 12px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+                              <p style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0, alignSelf: 'center' }}>Legend</p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <div style={{ width: '24px', height: '3px', background: '#2563EB', borderRadius: '2px' }} />
+                                <span style={{ fontSize: '10px', color: '#374151' }}>Steps 1, 2, 3, 6 — Controlled by Backbase</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <div style={{ width: '24px', height: '3px', background: '#374151', borderRadius: '2px' }} />
+                                <span style={{ fontSize: '10px', color: '#374151' }}>Steps 4, 5, 7, 8 — Controlled by Bank's Partners</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* ── End-to-End Handshake — Swimlane View ── */}
+                    <div className="mt-8 px-2">
+                      <div className="text-center mb-4">
+                        <h3 className="text-xl font-semibold text-slate-700">End-to-End Handshake — Swimlane View</h3>
+                      </div>
                     {(() => {
                       const LANE_W = 138;
                       const HEADER_H = 62;
@@ -940,13 +1022,14 @@
                         </div>
                       );
                     })()}
+                    </div>
 
-                    {/* ── 2b. Hardened WebView Integration Approach ── */}
+                    {/* ── Hardened WebView Integration Approach ── */}
                     <div className="mt-8 px-2">
 
                       {/* heading */}
                       <div className="text-center mb-4">
-                        <h3 className="text-xl font-semibold text-slate-700">2b. Hardened WebView Integration Approach</h3>
+                        <h3 className="text-xl font-semibold text-slate-700">Hardened WebView Integration Approach</h3>
                         <p className="text-slate-500 text-sm mt-1">Structural isolation model for 3rd-party mini-app integration</p>
                       </div>
 
@@ -1113,6 +1196,8 @@
 
                       </div>{/* end flex column */}
                     </div>
+
+
                   </div>
 
                   <div className="w-full h-px bg-slate-200 my-6"></div>
